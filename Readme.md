@@ -1,57 +1,116 @@
-# PCom Homework #4
+# Web Client for REST API over HTTP
 
-This repository contains starter scripts for the PCom HTTP client assignment.
+This project implements a **web client** that interacts with a **RESTful API** via **HTTP**. The client:
+1. Accepts **commands from the console** (e.g., `register`, `login`, `enter_library`, etc.).
+2. Sends **HTTP requests** (GET, POST, DELETE) to a remote **server**.
+3. Parses responses (JSON format), handles cookies, and displays **appropriate messages** to the user.
 
-## Checker
+It demonstrates **core HTTP operations** (GET/POST/DELETE), usage of **JSON** (via [nlohmann/json.hpp](https://github.com/nlohmann/json)), and **session handling** (cookies, access tokens).
 
-Dependencies:
+---
 
-- Python >= 3.7;
-- [`pexpect`](https://pexpect.readthedocs.io/en/stable/) (third party Python package);
+## Table of Contents
+1. [Overview](#overview)  
+2. [Features](#features)  
+3. [Implementation Details](#implementation-details)  
+4. [Commands](#commands)  
 
-It is highly recommended to use a VirtualEnv:
-```sh
-python3 -mvenv .venv
-# Note: you need to source activate each time you start a new terminal
-source .venv/bin/activate
-```
+---
 
-Afterwards, install `pexpect` using PIP:
-```sh
-python3 -mpip install pexpect
-```
+## Overview
+This client:
+- Connects to a **specific server** (IP and port configured in constants).
+- Maintains **two tokens** in the form of cookies:
+  1. **Session Cookie** – identifies a logged-in user.
+  2. **Library Access Token** – grants access to book-related endpoints once inside the library.
+- Reads **commands** from **stdin**, constructs an **HTTP request**, sends it, and interprets the response.
 
-### Usage
+**Core technologies**:
+- **C/C++** with sockets.
+- **HTTP** request/response structure.
+- **JSON** for request payloads and server responses.
+- **Cookie** (string) management for session and library token.
 
-Invoke the checker on your client's compiled executable:
+---
 
-```sh
-# !!! don't forget to source .venv/bin/activate !!!
-# first, read the tool's internal help:
-python3 checker/checker.py --help 
-# run the checker using default settings:
-python3 checker/checker.py ../path/to/client
-# Hint: supply a custom username:password (make sure to use something unique)
-python3 checker/checker.py --user 'myuser-1337:hunter2' ../path/to/client
-```
+## Features
 
-> **Warning**: the checker has default credentials (`test:test123`) as constants
-> inside the source code. You may want to change them to avoid always specifying
-> the `--user user:pass` argument at each invocation.
+1. **User Registration** (`register`)
+   - Collects username and password from the user.
+   - Submits a POST request to `/register`.
+   - On success, prints a **success message**.  
+   - On failure (username taken, invalid data), shows an **error** from the server.
 
-Also, the server is shared between all students and never forgets an user
-account or its stored books (for the duration of the assignment, at least).
-Thus, you might wish to occasionally create a new user for having a clean slate.
+2. **User Login** (`login`)
+   - Collects username and password.
+   - Submits a POST request to `/login`.
+   - Stores **session token** returned in the **Set-Cookie** header (if successful).
+   - Prints relevant **error** on invalid credentials or success message on correct credentials.
 
-Alternately, use `--script delete_all` if you have a functioning implementation
-for `get_books` and `delete_book` (and the common login part, ofc!).
+3. **Enter Library** (`enter_library`)
+   - Requires a valid **session token**.
+   - Sends a GET request to `/api/v1/tema/library/access`.
+   - Stores a **library access token** (returned in JSON) in a second cookie field.
 
-Also make sure to check out [the source code](./checker/checker.py) for the
-actual details about the script being tested.
+4. **Get All Books** (`get_books`)
+   - Requires both **session token** and **library token**.
+   - Retrieves the entire books list in JSON from the server.
 
-> <span style="color: #A33">**Warning**: The checker is just an instrument used by
-our team to automate the verification process. It should not be regarded as the
-single source of truth for assessing the correctness of a solution.
-It may also contain bugs (we also manually validate your programs when
-a script fails), though forum reports and PRs are welcome!</span>
+5. **Get Book by ID** (`get_book`)
+   - Prompts the user for a numeric book ID.
+   - Sends a GET request to `.../books/<ID>`.
+   - Prints the **book details** or an **error** if not found.
 
+6. **Add Book** (`add_book`)
+   - Prompts for book details: title, author, genre, publisher, page count.
+   - Sends these in JSON via a POST request.
+   - Prints a **success** message if the server adds the book, or **error** otherwise.
+
+7. **Delete Book** (`delete_book`)
+   - Requires library token.
+   - Sends a DELETE request to `.../books/<ID>`.
+   - Prints a **success** message on successful deletion or **error** otherwise.
+
+8. **Logout** (`logout`)
+   - Terminates session on the server by issuing a GET request to `/logout`.
+   - Clears all stored cookies (both session & library token).
+
+9. **Exit** (`exit`)
+   - Frees resources and **closes** the client application.
+
+---
+
+## Implementation Details
+
+1. **HTTP Requests**  
+   - Built with helper functions (`compute_get_request`, `compute_post_request`, `compute_delete_request`) that format headers correctly.
+   - Cookies are passed if available (session, library token).
+   - **JSON** serialization uses `nlohmann::json`.
+
+2. **Cookies & Session Management**  
+   - Session cookie is set upon **login** in the `Set-Cookie` header and stored in `cookies[0]`.
+   - Library access token is parsed from JSON response in **`enter_library`** and stored in `cookies[1]`.
+
+3. **Error Handling**  
+   - Checks **HTTP status code** (4xx or 5xx) from the server.
+   - Extracts **`{"error": "..."} `** from the JSON body and displays it.
+
+4. **Validation**  
+   - Ensures **username** and **password** are non-empty and do not contain spaces.
+   - Checks **book ID** is numeric.
+   - Ensures **page_count** is a positive integer.
+
+---
+
+## Commands
+
+Below are the **console commands** you can type:
+- **`register`**: Prompt for credentials, register a new user.
+- **`login`**: Prompt for credentials, log in existing user.
+- **`enter_library`**: Obtain a library token if logged in.
+- **`get_books`**: List all books (requires valid tokens).
+- **`get_book`**: Prompt for a book ID and retrieve details.
+- **`add_book`**: Prompt for book data (title, author, etc.) and add a new book.
+- **`delete_book`**: Prompt for a book ID and remove that book.
+- **`logout`**: Invalidate session and clear cookies.
+- **`exit`**: Terminate the client application.

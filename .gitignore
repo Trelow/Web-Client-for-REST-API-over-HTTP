@@ -1,8 +1,0 @@
-# ignore temporary / user solution dirs
-solutions/
-tmp/
-
-# IDE projects
-.idea/
-.vscode/
-
