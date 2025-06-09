@@ -1,6 +1,6 @@
-# Web Client for REST API over HTTP
+# Digital Library REST Client (C++)
 
-This project implements a **web client** that interacts with a **RESTful API** via **HTTP**. The client:
+Developed a C++ client application that communicates with a **RESTful API** for a digital library system. The client:
 1. Accepts **commands from the console** (e.g., `register`, `login`, `enter_library`, etc.).
 2. Sends **HTTP requests** (GET, POST, DELETE) to a remote **server**.
 3. Parses responses (JSON format), handles cookies, and displays **appropriate messages** to the user.
